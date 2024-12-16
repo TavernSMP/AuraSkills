@@ -30,6 +30,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 @CommandAlias("%skills_alias")
 public class SkillsRootCommand extends BaseCommand {
@@ -73,7 +74,7 @@ public class SkillsRootCommand extends BaseCommand {
 	public void onTop(CommandSender sender, String[] args) {
 		Locale locale = plugin.getLocale(sender);
 		if (args.length == 0) {
-			List<SkillValue> lb = plugin.getLeaderboardManager().getPowerLeaderboard(1, 10);
+			List<SkillValue> lb = filterOperators(plugin.getLeaderboardManager().getPowerLeaderboard(1, 10));
 			sender.sendMessage(plugin.getMsg(CommandMessage.TOP_POWER_HEADER, locale));
 			for (SkillValue skillValue : lb) {
 				String name = Bukkit.getOfflinePlayer(skillValue.id()).getName();
@@ -84,14 +85,15 @@ public class SkillsRootCommand extends BaseCommand {
 			}
 		} else if (args.length == 1) {
 			if (args[0].equalsIgnoreCase("average")) {
-				List<SkillValue> lb = plugin.getLeaderboardManager().getAverageLeaderboard(1, 10);
+				List<SkillValue> lb = filterOperators(plugin.getLeaderboardManager().getAverageLeaderboard(1, 10));
 				sender.sendMessage(plugin.getMsg(CommandMessage.TOP_AVERAGE_HEADER, locale));
 				sendLeaderboardEntries(sender, locale, lb);
 			} else {
 				try {
 					int page = Integer.parseInt(args[0]);
-					List<SkillValue> lb = plugin.getLeaderboardManager().getPowerLeaderboard(page, 10);
-					sender.sendMessage(plugin.getMsg(CommandMessage.TOP_POWER_HEADER_PAGE, locale).replace("{page}", String.valueOf(page)));
+					List<SkillValue> lb = filterOperators(plugin.getLeaderboardManager().getPowerLeaderboard(page, 10));
+					sender.sendMessage(plugin.getMsg(CommandMessage.TOP_POWER_HEADER_PAGE, locale)
+							.replace("{page}", String.valueOf(page)));
 					for (SkillValue skillValue : lb) {
 						String name = Bukkit.getOfflinePlayer(skillValue.id()).getName();
 						sender.sendMessage(plugin.getMsg(CommandMessage.TOP_POWER_ENTRY, locale)
@@ -106,8 +108,9 @@ public class SkillsRootCommand extends BaseCommand {
 						skill = plugin.getSkillRegistry().getOrNull(NamespacedId.fromDefault(skillName));
 					}
 					if (skill != null && skill.isEnabled()) {
-						List<SkillValue> lb = plugin.getLeaderboardManager().getLeaderboard(skill, 1, 10);
-						sender.sendMessage(plugin.getMsg(CommandMessage.TOP_SKILL_HEADER, locale).replace("{skill}", skill.getDisplayName(locale)));
+						List<SkillValue> lb = filterOperators(plugin.getLeaderboardManager().getLeaderboard(skill, 1, 10));
+						sender.sendMessage(plugin.getMsg(CommandMessage.TOP_SKILL_HEADER, locale)
+								.replace("{skill}", skill.getDisplayName(locale)));
 						for (SkillValue skillValue : lb) {
 							String name = Bukkit.getOfflinePlayer(skillValue.id()).getName();
 							sender.sendMessage(plugin.getMsg(CommandMessage.TOP_SKILL_ENTRY, locale)
@@ -120,7 +123,9 @@ public class SkillsRootCommand extends BaseCommand {
 					}
 				}
 			}
+
 		}
+
 		else if (args.length == 2) {
 			if (args[0].equalsIgnoreCase("average")) {
 				try {
@@ -381,6 +386,23 @@ public class SkillsRootCommand extends BaseCommand {
 			}
 		});
 	}
+
+	/**
+	 * Filters out players who are operators or have * permissions.
+	 */
+	private List<SkillValue> filterOperators(List<SkillValue> leaderboard) {
+		return leaderboard.stream()
+				.filter(skillValue -> {
+					OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(skillValue.id());
+					if (offlinePlayer.isOnline()) {
+						Player player = offlinePlayer.getPlayer();
+						return !(player.isOp() || player.hasPermission("*"));
+					}
+					return true; // Exclude only if the player is online and matches the condition
+				})
+				.collect(Collectors.toList());
+	}
+
 
 	// PlayerDataState may return null
 	private CompletableFuture<UserState> getPlayerDataState(OfflinePlayer player) {
