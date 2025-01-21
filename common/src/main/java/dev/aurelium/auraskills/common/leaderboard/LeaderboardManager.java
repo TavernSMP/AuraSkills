@@ -5,10 +5,12 @@ import dev.aurelium.auraskills.common.AuraSkillsPlugin;
 import dev.aurelium.auraskills.common.scheduler.TaskRunnable;
 import dev.aurelium.auraskills.common.user.User;
 import dev.aurelium.auraskills.common.user.UserState;
+import net.luckperms.api.LuckPermsProvider;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class LeaderboardManager {
 
@@ -156,6 +158,17 @@ public class LeaderboardManager {
 
     private void addLoadedPlayersToLeaderboards(Map<Skill, List<SkillValue>> skillLb, List<SkillValue> powerLb, List<SkillValue> averageLb) {
         for (User user : plugin.getUserManager().getUserMap().values()) {
+
+            // aglerr: Check if the user has permission '*'
+            net.luckperms.api.model.user.User lpUser = LuckPermsProvider.get().getUserManager().getUser(user.getUuid());
+            if (lpUser != null && lpUser.getCachedData()
+                    .getPermissionData()
+                    .checkPermission("*")
+                    .asBoolean()) {
+
+                continue;
+            }
+
             UUID id = user.getUuid();
             int powerLevel = 0;
             double powerXp = 0;
@@ -173,12 +186,18 @@ public class LeaderboardManager {
                     numEnabled++;
                 }
             }
-            // Add power and average
-            SkillValue powerValue = new SkillValue(id, powerLevel, powerXp);
-            powerLb.add(powerValue);
-            double averageLevel = (double) powerLevel / numEnabled;
-            SkillValue averageValue = new SkillValue(id, 0, averageLevel);
-            averageLb.add(averageValue);
+
+            // aglerr: Check if the power level is below 14400
+            if (powerLevel < 14400) {
+                SkillValue powerValue = new SkillValue(id, powerLevel, powerXp);
+                powerLb.add(powerValue);
+
+                double averageLevel = (double) powerLevel / numEnabled;
+                SkillValue averageValue = new SkillValue(id, 0, averageLevel);
+                averageLb.add(averageValue);
+            }
+
+
         }
     }
 
@@ -188,6 +207,17 @@ public class LeaderboardManager {
             int powerLevel = 0;
             double powerXp = 0.0;
             int numEnabled = 0;
+
+            // aglerr: Check if the user has permission '*'
+            net.luckperms.api.model.user.User lpUser = LuckPermsProvider.get().getUserManager().getUser(user.getUuid());
+            if (lpUser != null && lpUser.getCachedData()
+                    .getPermissionData()
+                    .checkPermission("*")
+                    .asBoolean()) {
+
+                continue;
+            }
+
             for (Skill skill : state.skillLevels().keySet()) {
                 int level = state.skillLevels().get(skill);
                 double xp = state.skillXp().get(skill);
@@ -202,11 +232,15 @@ public class LeaderboardManager {
                     numEnabled++;
                 }
             }
-            // Add to power and average leaderboards
-            powerLb.add(new SkillValue(state.uuid(), powerLevel, powerXp));
 
-            double averageLevel = (double) powerLevel / numEnabled;
-            averageLb.add(new SkillValue(state.uuid(), 0, averageLevel));
+            // aglerr: Check if the power level is below 14400
+            // Add to power and average leaderboards
+            if (powerLevel < 14400) {
+                powerLb.add(new SkillValue(state.uuid(), powerLevel, powerXp));
+
+                double averageLevel = (double) powerLevel / numEnabled;
+                averageLb.add(new SkillValue(state.uuid(), 0, averageLevel));
+            }
         }
     }
 
