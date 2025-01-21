@@ -209,7 +209,7 @@ public class LeaderboardManager {
             int numEnabled = 0;
 
             // aglerr: Check if the user has permission '*'
-            net.luckperms.api.model.user.User lpUser = LuckPermsProvider.get().getUserManager().getUser(user.getUuid());
+            net.luckperms.api.model.user.User lpUser = LuckPermsProvider.get().getUserManager().getUser(state.uuid());
             if (lpUser != null && lpUser.getCachedData()
                     .getPermissionData()
                     .checkPermission("*")
