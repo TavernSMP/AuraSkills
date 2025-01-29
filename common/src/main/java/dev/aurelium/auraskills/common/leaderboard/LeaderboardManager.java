@@ -187,17 +187,15 @@ public class LeaderboardManager {
                 }
             }
 
-            // aglerr: Check if the power level is below 14400
-            if (powerLevel < 14400) {
-                SkillValue powerValue = new SkillValue(id, powerLevel, powerXp);
-                powerLb.add(powerValue);
-
-                double averageLevel = (double) powerLevel / numEnabled;
-                SkillValue averageValue = new SkillValue(id, 0, averageLevel);
-                averageLb.add(averageValue);
+            // aglerr: Skip player if the power level is exactly 14400
+            if (powerLevel == 14400) {
+                continue;
             }
+            // Add to power and average leaderboards
+            powerLb.add(new SkillValue(id, powerLevel, powerXp));
 
-
+            double averageLevel = (double) powerLevel / numEnabled;
+            averageLb.add(new SkillValue(id, 0, averageLevel));
         }
     }
 
@@ -233,14 +231,15 @@ public class LeaderboardManager {
                 }
             }
 
-            // aglerr: Check if the power level is below 14400
-            // Add to power and average leaderboards
-            if (powerLevel < 14400) {
-                powerLb.add(new SkillValue(state.uuid(), powerLevel, powerXp));
-
-                double averageLevel = (double) powerLevel / numEnabled;
-                averageLb.add(new SkillValue(state.uuid(), 0, averageLevel));
+            // aglerr: Skip player if the power level is exactly 14400
+            if (powerLevel == 14400) {
+                continue;
             }
+            // Add to power and average leaderboards
+            powerLb.add(new SkillValue(state.uuid(), powerLevel, powerXp));
+
+            double averageLevel = (double) powerLevel / numEnabled;
+            averageLb.add(new SkillValue(state.uuid(), 0, averageLevel));
         }
     }
 
