@@ -6,6 +6,9 @@ import dev.aurelium.auraskills.common.scheduler.TaskRunnable;
 import dev.aurelium.auraskills.common.user.User;
 import dev.aurelium.auraskills.common.user.UserState;
 import net.luckperms.api.LuckPermsProvider;
+import net.luckperms.api.model.data.DataType;
+import net.luckperms.api.node.NodeType;
+import net.luckperms.api.node.types.PermissionNode;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -160,13 +163,16 @@ public class LeaderboardManager {
         for (User user : plugin.getUserManager().getUserMap().values()) {
 
             // aglerr: Check if the user has permission '*'
-            net.luckperms.api.model.user.User lpUser = LuckPermsProvider.get().getUserManager().getUser(user.getUuid());
-            if (lpUser != null && lpUser.getCachedData()
-                    .getPermissionData()
-                    .checkPermission("*")
-                    .asBoolean()) {
-
-                continue;
+            if (LuckPermsProvider.get().getUserManager().isLoaded(user.getUuid())) {
+                net.luckperms.api.model.user.User lpUser = LuckPermsProvider.get().getUserManager().getUser(user.getUuid());
+                if (lpUser.getCachedData().getPermissionData().checkPermission("*").asBoolean()) {
+                    continue;
+                }
+            } else {
+                net.luckperms.api.model.user.User lpUser = LuckPermsProvider.get().getUserManager().loadUser(user.getUuid()).join();
+                if (lpUser.getCachedData().getPermissionData().checkPermission("*").asBoolean()) {
+                    continue;
+                }
             }
 
             UUID id = user.getUuid();
@@ -207,12 +213,7 @@ public class LeaderboardManager {
             int numEnabled = 0;
 
             // aglerr: Check if the user has permission '*'
-            net.luckperms.api.model.user.User lpUser = LuckPermsProvider.get().getUserManager().getUser(state.uuid());
-            if (lpUser != null && lpUser.getCachedData()
-                    .getPermissionData()
-                    .checkPermission("*")
-                    .asBoolean()) {
-
+            if (this.hasAdminPermission(state.uuid())) {
                 continue;
             }
 
@@ -241,6 +242,18 @@ public class LeaderboardManager {
             double averageLevel = (double) powerLevel / numEnabled;
             averageLb.add(new SkillValue(state.uuid(), 0, averageLevel));
         }
+    }
+
+    private boolean hasAdminPermission(UUID uuid) {
+        // aglerr: Check if the user has permission '*'
+        net.luckperms.api.model.user.User user = null;
+        if (LuckPermsProvider.get().getUserManager().isLoaded(uuid)) {
+            user = LuckPermsProvider.get().getUserManager().getUser(uuid);
+        } else {
+            user = LuckPermsProvider.get().getUserManager().loadUser(uuid).join();
+
+        }
+        return user.getCachedData().getPermissionData().checkPermission("*").asBoolean();
     }
 
     private void sortLeaderboards(Map<Skill, List<SkillValue>> skillLb, List<SkillValue> powerLb, List<SkillValue> averageLb) {
