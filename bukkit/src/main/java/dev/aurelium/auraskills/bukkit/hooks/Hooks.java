@@ -2,8 +2,9 @@ package dev.aurelium.auraskills.bukkit.hooks;
 
 import dev.aurelium.auraskills.bukkit.hooks.mythicmobs.MythicMobsHook;
 import dev.aurelium.auraskills.common.hooks.Hook;
+import dev.aurelium.auraskills.common.hooks.HookType;
 
-public enum Hooks {
+public enum Hooks implements HookType {
 
     DECENT_HOLOGRAMS(DecentHologramsHook.class, "DecentHolograms"),
     HOLOGRAPHIC_DISPLAYS(HolographicDisplaysHook.class, "HolographicDisplays"),
@@ -15,7 +16,7 @@ public enum Hooks {
     VAULT(VaultHook.class, "Vault"),
     WORLD_GUARD(WorldGuardHook.class, "WorldGuard"),
     MYTHIC_MOBS(MythicMobsHook.class, "MythicMobs"),
-    ORAXEN(OraxenHook.class, "Oraxen");
+    NEXO(NexoHook.class, "Nexo");
 
     private final Class<? extends Hook> hookClass;
     private final String pluginName;
@@ -25,10 +26,12 @@ public enum Hooks {
         this.pluginName = pluginName;
     }
 
+    @Override
     public Class<? extends Hook> getHookClass() {
         return hookClass;
     }
 
+    @Override
     public String getPluginName() {
         return pluginName;
     }

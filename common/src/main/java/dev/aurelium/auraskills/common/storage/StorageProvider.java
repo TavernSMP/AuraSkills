@@ -1,15 +1,20 @@
 package dev.aurelium.auraskills.common.storage;
 
 import dev.aurelium.auraskills.api.skill.Skill;
+import dev.aurelium.auraskills.api.stat.StatModifier;
+import dev.aurelium.auraskills.api.trait.TraitModifier;
 import dev.aurelium.auraskills.common.AuraSkillsPlugin;
 import dev.aurelium.auraskills.common.config.Option;
+import dev.aurelium.auraskills.common.ref.PlayerRef;
 import dev.aurelium.auraskills.common.scheduler.TaskRunnable;
 import dev.aurelium.auraskills.common.user.AntiAfkLog;
 import dev.aurelium.auraskills.common.user.User;
 import dev.aurelium.auraskills.common.user.UserManager;
 import dev.aurelium.auraskills.common.user.UserState;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,7 +35,7 @@ public abstract class StorageProvider {
         this.plugin = plugin;
     }
 
-    public void load(UUID uuid) throws Exception {
+    public void load(UUID uuid, @Nullable PlayerRef platformPlayer) throws Exception {
         ReentrantReadWriteLock lock = getUserLock(uuid);
         boolean lockAcquired = false;
         try {
@@ -39,13 +44,17 @@ public abstract class StorageProvider {
                 plugin.logger().warn("Load timout exceeded for user " + uuid);
             }
 
-            User user = loadRaw(uuid);
+            User user = loadRaw(uuid, platformPlayer);
             fixInvalidData(user);
 
             plugin.getUserManager().addUser(user);
 
             plugin.getScheduler().executeSync(() -> {
-                plugin.getStatManager().updateStats(user); // Update stats
+                plugin.getStatManager().recalculateStats(user, false);
+                // Applies user item/armor modifiers for the first time
+                plugin.getModifierManager().applyModifiers(user, false);
+                plugin.getStatManager().reloadAllTraits(user);
+
                 plugin.getEventHandler().callUserLoadEvent(user); // Call event
             });
 
@@ -61,7 +70,7 @@ public abstract class StorageProvider {
         }
     }
 
-    protected abstract User loadRaw(UUID uuid) throws Exception;
+    protected abstract User loadRaw(UUID uuid, PlayerRef platformPlayer) throws Exception;
 
     /**
      * Loads a snapshot of player data for an offline player
@@ -146,6 +155,20 @@ public abstract class StorageProvider {
                 }
             }
         }
+        // Remove legacy stored item modifiers
+        List<String> toRemove = new ArrayList<>();
+        for (StatModifier modifier : user.getStatModifiers().values()) {
+            if (modifier.name().startsWith("AureliumSkills.Modifier")) {
+                toRemove.add(modifier.name());
+            }
+            // Remove correctly formatted but old persistent modifiers
+            if (modifier.name().startsWith(StatModifier.ITEM_PREFIX) || modifier.name().startsWith(TraitModifier.ITEM_PREFIX)) {
+                if (!modifier.isNonPersistent()) {
+                    toRemove.add(modifier.name());
+                }
+            }
+        }
+        toRemove.forEach(s -> user.removeStatModifier(s, false));
     }
 
     protected ReentrantReadWriteLock getUserLock(UUID uuid) {

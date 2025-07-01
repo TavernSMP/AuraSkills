@@ -8,6 +8,7 @@ import dev.aurelium.auraskills.api.source.type.DamageXpSource.DamageCause;
 import dev.aurelium.auraskills.bukkit.AuraSkills;
 import dev.aurelium.auraskills.bukkit.source.*;
 import dev.aurelium.auraskills.bukkit.user.BukkitUser;
+import dev.aurelium.auraskills.bukkit.util.SoundUtil;
 import dev.aurelium.auraskills.common.config.Option;
 import dev.aurelium.auraskills.common.level.LevelManager;
 import dev.aurelium.auraskills.common.user.User;
@@ -73,7 +74,7 @@ public class BukkitLevelManager extends LevelManager {
     }
 
     public void addEntityXp(User user, Skill skill, @NotNull XpSource source, double amount,
-                            LivingEntity attacked, Entity damager, EntityEvent originalEvent) {
+            LivingEntity attacked, Entity damager, EntityEvent originalEvent) {
         if (amount == 0) return; // Ignore if source amount is 0
 
         double amountToAdd = amount * calculateMultiplier(user, skill);
@@ -86,7 +87,7 @@ public class BukkitLevelManager extends LevelManager {
     }
 
     public void addDamageXp(User user, Skill skill, @NotNull XpSource source, double amount,
-                            DamageCause cause, Entity damager, EntityEvent originalEvent) {
+            DamageCause cause, Entity damager, EntityEvent originalEvent) {
         if (amount == 0) return;
 
         double amountToAdd = amount * calculateMultiplier(user, skill);
@@ -102,21 +103,15 @@ public class BukkitLevelManager extends LevelManager {
     public void playLevelUpSound(@NotNull User user) {
         Player player = ((BukkitUser) user).getPlayer();
         if (player == null) return;
+        String soundName = plugin.configString(Option.LEVELER_SOUND_TYPE);
         try {
-            player.playSound(player.getLocation(), Sound.valueOf(plugin.configString(Option.LEVELER_SOUND_TYPE))
-                    , SoundCategory.valueOf(plugin.configString(Option.LEVELER_SOUND_CATEGORY))
-                    , (float) plugin.configDouble(Option.LEVELER_SOUND_VOLUME), (float) plugin.configDouble(Option.LEVELER_SOUND_PITCH));
+            player.playSound(player.getLocation(), SoundUtil.getFromEitherName(soundName),
+                    SoundCategory.valueOf(plugin.configString(Option.LEVELER_SOUND_CATEGORY)),
+                    (float) plugin.configDouble(Option.LEVELER_SOUND_VOLUME), (float) plugin.configDouble(Option.LEVELER_SOUND_PITCH));
         } catch (Exception e) {
-            plugin.logger().warn("Error playing level up sound (Check config) Played the default sound instead");
+            plugin.logger().warn("Error playing level up sound: " + soundName + ", played the default sound instead");
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.MASTER, 1f, 0.5f);
         }
     }
 
-    @Override
-    public void reloadModifiers(User user) {
-        Player player = ((BukkitUser) user).getPlayer();
-        if (player != null) {
-            plugin.getModifierManager().reloadPlayer(player);
-        }
-    }
 }

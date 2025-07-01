@@ -33,7 +33,8 @@ public class OpenMenuCommand extends BaseCommand {
 
     public OpenMenuCommand(AuraSkills plugin) {
         this.plugin = plugin;
-        this.mapType = new TypeToken<Map<String, Object>>(){}.getType();
+        this.mapType = new TypeToken<Map<String, Object>>() {
+        }.getType();
         this.gson = new GsonBuilder()
                 .registerTypeAdapter(mapType, getDeserializer())
                 .create();
@@ -42,6 +43,7 @@ public class OpenMenuCommand extends BaseCommand {
     @Default
     @CommandPermission("auraskills.command.openmenu")
     @CommandCompletion("@menu_names @players")
+    @Description("%desc_openmenu")
     public void onOpenMenu(CommandSender sender, String menuName, @Optional @Flags("other") Player target, @Optional JsonArg properties, @Default("0") int page) {
         Locale locale = plugin.getLocale(sender);
         if (target == null) { // Open menu for sender

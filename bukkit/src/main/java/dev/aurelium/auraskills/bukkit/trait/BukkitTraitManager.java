@@ -13,6 +13,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.jetbrains.annotations.Nullable;
 
+import java.text.NumberFormat;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -71,6 +73,10 @@ public class BukkitTraitManager extends TraitManager {
         return null;
     }
 
+    public Collection<BukkitTraitHandler> getAllTraitImpls() {
+        return traitImpls.values();
+    }
+
     @Override
     public double getBaseLevel(User user, Trait trait) {
         Player player = ((BukkitUser) user).getPlayer();
@@ -92,12 +98,19 @@ public class BukkitTraitManager extends TraitManager {
     }
 
     @Override
-    public String getMenuDisplay(Trait trait, double value, Locale locale) {
+    public String getMenuDisplay(Trait trait, double value, Locale locale, @Nullable NumberFormat format) {
         BukkitTraitHandler impl = getTraitImpl(trait);
         if (impl != null) {
-            return impl.getMenuDisplay(value, trait, locale);
+            if (impl instanceof HpTrait hpTrait) {
+                return hpTrait.getMenuDisplay(value, trait, format);
+            } else {
+                return impl.getMenuDisplay(value, trait, locale);
+            }
+        } else if (format != null) {
+            return format.format(value);
         } else {
             return NumberUtil.format1(value);
         }
     }
+
 }

@@ -24,6 +24,7 @@ public class BukkitPotionType {
         this.upgraded = upgraded;
     }
 
+    @SuppressWarnings("deprecation")
     public BukkitPotionType(PotionMeta meta) {
         if (VersionUtils.isAtLeastVersion(20, 2)) {
             type = meta.getBasePotionType();
@@ -76,9 +77,10 @@ public class BukkitPotionType {
                 Method setBasePotionData = PotionMeta.class.getDeclaredMethod("setBasePotionData", potionDataClass);
                 setBasePotionData.invoke(meta, potionData);
             } catch (InstantiationException | IllegalAccessException | InvocationTargetException |
-                     NoSuchMethodException | ClassNotFoundException e) {
+                    NoSuchMethodException | ClassNotFoundException e) {
                 throw new RuntimeException(e);
             }
         }
     }
+
 }

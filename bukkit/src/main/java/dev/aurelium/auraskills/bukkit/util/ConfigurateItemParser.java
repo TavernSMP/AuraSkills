@@ -16,6 +16,7 @@ import dev.aurelium.slate.position.FixedPosition;
 import dev.aurelium.slate.position.GroupPosition;
 import dev.aurelium.slate.position.PositionProvider;
 import dev.aurelium.slate.util.SkullCreator;
+import dev.aurelium.slate.util.VersionUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -133,6 +134,7 @@ public class ConfigurateItemParser {
         if (!config.node("durability").virtual() && !excludedKeys.contains("durability")) {
             parseDurability(config, item);
         }
+        parseItemModel(config, item);
         // Parses custom_model_data and old format CustomModelData nbt map
         parseCustomModelData(config, item);
         parseHideTooltip(config, item);
@@ -195,8 +197,8 @@ public class ConfigurateItemParser {
             ItemMeta meta = getMeta(item);
             List<String> flags = section.node("flags").getList(String.class, new ArrayList<>());
             for (String flagName : flags) {
-                ItemFlag itemFlag = ItemFlag.valueOf(flagName.toUpperCase(Locale.ROOT));
-                if (itemFlag == ItemFlag.HIDE_ATTRIBUTES && VersionUtils.isAtLeastVersion(20, 5)) {
+                ItemFlag itemFlag = ItemFlag.valueOf(substituteItemFlag(flagName.toUpperCase(Locale.ROOT)));
+                if (itemFlag == ItemFlag.HIDE_ATTRIBUTES && VersionUtils.isAtLeastVersion(20, 5) && !plugin.isMock()) {
                     meta.setAttributeModifiers(Material.IRON_SWORD.getDefaultAttributeModifiers(EquipmentSlot.HAND));
                 }
                 meta.addItemFlags(itemFlag);
@@ -205,6 +207,15 @@ public class ConfigurateItemParser {
         } catch (SerializationException ignored) {
 
         }
+    }
+
+    private String substituteItemFlag(String name) {
+        if (VersionUtils.isAtLeastVersion(20, 5)) {
+            if (name.equals("HIDE_POTION_EFFECTS")) {
+                return "HIDE_ADDITIONAL_TOOLTIP";
+            }
+        }
+        return name;
     }
 
     private void parseGlow(ItemStack item) {
@@ -234,7 +245,8 @@ public class ConfigurateItemParser {
 
     public void parsePotionData(ItemStack item, ConfigurationNode node) {
         PotionMeta potionMeta = (PotionMeta) getMeta(item);
-        PotionType potionType = PotionType.valueOf(node.node("type").getString("WATER").toUpperCase(Locale.ROOT));
+        String typeName = node.node("type").getString("WATER").toUpperCase(Locale.ROOT);
+        PotionType potionType = PotionType.valueOf(substitutePotionType(typeName));
         boolean extended = node.node("extended").getBoolean(false);
         boolean upgraded = node.node("upgraded").getBoolean(false);
 
@@ -242,6 +254,20 @@ public class ConfigurateItemParser {
         bukkitPotionType.applyToMeta(potionMeta);
 
         item.setItemMeta(potionMeta);
+    }
+
+    private String substitutePotionType(String name) {
+        if (!VersionUtils.isAtLeastVersion(20, 5)) {
+            return name;
+        }
+        return switch (name) {
+            case "INSTANT_DAMAGE" -> "HARMING";
+            case "INSTANT_HEAL" -> "HEALING";
+            case "REGEN" -> "REGENERATION";
+            case "JUMP" -> "LEAPING";
+            case "SPEED" -> "SWIFTNESS";
+            default -> name;
+        };
     }
 
     private void parseEnchantments(ItemStack item, ConfigurationNode section) {
@@ -431,6 +457,7 @@ public class ConfigurateItemParser {
         item.setAmount(amount);
     }
 
+    @SuppressWarnings("deprecation")
     private void parseCustomModelData(ConfigurationNode config, ItemStack item) {
         if (!config.node("custom_model_data").virtual()) {
             int data = config.node("custom_model_data").getInt();
@@ -441,6 +468,15 @@ public class ConfigurateItemParser {
             int data = config.node("nbt").node("CustomModelData").getInt();
             ItemMeta meta = getMeta(item);
             meta.setCustomModelData(data);
+            item.setItemMeta(meta);
+        }
+    }
+
+    private void parseItemModel(ConfigurationNode config, ItemStack item) {
+        if (!config.node("item_model").empty() && VersionUtil.isAtLeastVersion(21, 2)) {
+            String model = config.node("item_model").getString("");
+            ItemMeta meta = getMeta(item);
+            meta.setItemModel(NamespacedKey.fromString(model));
             item.setItemMeta(meta);
         }
     }

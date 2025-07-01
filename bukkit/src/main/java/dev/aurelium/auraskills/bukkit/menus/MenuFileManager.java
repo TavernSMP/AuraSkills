@@ -2,12 +2,11 @@ package dev.aurelium.auraskills.bukkit.menus;
 
 import dev.aurelium.auraskills.api.registry.NamespacedRegistry;
 import dev.aurelium.auraskills.bukkit.AuraSkills;
+import dev.aurelium.auraskills.bukkit.menus.shared.SkillItem;
 import dev.aurelium.auraskills.common.api.ApiAuraSkills;
 import dev.aurelium.auraskills.common.util.file.FileUtil;
 import org.spongepowered.configurate.ConfigurationNode;
 import org.spongepowered.configurate.serialize.SerializationException;
-import org.spongepowered.configurate.yaml.NodeStyle;
-import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
 
 import java.io.File;
 import java.io.IOException;
@@ -17,7 +16,9 @@ import java.util.List;
 public class MenuFileManager {
 
     private final AuraSkills plugin;
-    public static final String[] MENU_NAMES = {"abilities", "leaderboard", "level_progression", "skills", "sources", "stats"};
+    public static final String[] MENU_NAMES = {
+            "abilities", "leaderboard", "level_progression", "skills", "sources", "stats", "stat_info"
+    };
 
     public MenuFileManager(AuraSkills plugin) {
         this.plugin = plugin;
@@ -40,6 +41,10 @@ public class MenuFileManager {
         }
 
         int menusLoaded = plugin.getSlate().loadMenus();
+
+        // Post load operations
+        SkillItem.loadFormats(plugin);
+
         plugin.getLogger().info("Loaded " + menusLoaded + " menus");
     }
 
@@ -90,12 +95,7 @@ public class MenuFileManager {
         user.node("file_version").set(embVersion);
 
         try {
-            YamlConfigurationLoader loader = YamlConfigurationLoader.builder()
-                    .file(userFile)
-                    .nodeStyle(NodeStyle.BLOCK)
-                    .indent(2)
-                    .build();
-            loader.save(user);
+            FileUtil.saveYamlFile(userFile, user);
 
             plugin.logger().info("Menu file " + userFile.getName() + " was updated: " + changed + " new sections added");
         } catch (IOException e) {

@@ -1,6 +1,5 @@
 package dev.aurelium.auraskills.common.config;
 
-
 public enum Option {
 
     // Mysql Options
@@ -110,6 +109,7 @@ public enum Option {
     DISABLE_IN_CREATIVE_MODE("disable_in_creative_mode", OptionType.BOOLEAN),
     ON_DEATH_RESET_SKILLS("on_death.reset_skills", OptionType.BOOLEAN),
     ON_DEATH_RESET_XP("on_death.reset_xp", OptionType.BOOLEAN),
+    ON_DEATH_RESET_XP_RATIO("on_death.reset_xp_ratio", OptionType.DOUBLE),
     AUTO_SAVE_ENABLED("auto_save.enabled", OptionType.BOOLEAN),
     AUTO_SAVE_INTERVAL_TICKS("auto_save.interval_ticks", OptionType.INT),
     // Leveler options
@@ -133,6 +133,8 @@ public enum Option {
     MODIFIER_ITEM_ENABLE_OFF_HAND("modifier.item.enable_off_hand", OptionType.BOOLEAN),
     MODIFIER_MULTIPLIER_ENABLED("modifier.multiplier.enabled", OptionType.BOOLEAN),
     MODIFIER_AUTO_CONVERT_FROM_LEGACY("modifier.auto_convert_from_legacy", OptionType.BOOLEAN),
+    MODIFIER_TEMPORARY_ENABLED("modifier.temporary.enabled", OptionType.BOOLEAN),
+    MODIFIER_TEMPORARY_CHECK_PERIOD("modifier.temporary.check_period", OptionType.INT),
     // Requirement options
     REQUIREMENT_ENABLED("requirement.enabled", OptionType.BOOLEAN),
     REQUIREMENT_OVERRIDE_GLOBAL("requirement.override_global", OptionType.BOOLEAN),
@@ -141,6 +143,9 @@ public enum Option {
     REQUIREMENT_ITEM_PREVENT_BLOCK_PLACE("requirement.item.prevent_block_place", OptionType.BOOLEAN),
     REQUIREMENT_ITEM_PREVENT_INTERACT("requirement.item.prevent_interact", OptionType.BOOLEAN),
     REQUIREMENT_ARMOR_PREVENT_ARMOR_EQUIP("requirement.armor.prevent_armor_equip", OptionType.BOOLEAN),
+    REQUIREMENT_BLOCKS_ENABLED("requirement.blocks.enabled", OptionType.BOOLEAN),
+    REQUIREMENT_BLOCKS_BYPASS_IN_CREATIVE_MODE("requirement.blocks.bypass_in_creative_mode", OptionType.BOOLEAN),
+    REQUIREMENT_BLOCKS_BYPASS_IF_OP("requirement.blocks.bypass_if_op", OptionType.BOOLEAN),
     // Damage options
     DAMAGE_CORRECT_LAST_DAMAGE("damage.correct_last_damage", OptionType.BOOLEAN),
     // Critical options
@@ -159,7 +164,9 @@ public enum Option {
     // Menu options
     MENUS_LORE_WRAPPING_WIDTH("menus.lore_wrapping_width", OptionType.INT),
     MENUS_PLACEHOLDER_API("menus.placeholder_api", OptionType.BOOLEAN),
+    MENUS_REMOVAL_PROTECTION("menus.removal_protection", OptionType.BOOLEAN),
     MENUS_STATS_SHOW_TRAIT_VALUES_DIRECTLY("menus.stats.show_trait_values_directly", OptionType.BOOLEAN),
+    MENUS_STAT_INFO_ENABLED("menus.stat_info.enabled", OptionType.BOOLEAN),
     LOOT_UPDATE_LOOT_TABLES("loot.update_loot_tables", OptionType.BOOLEAN),
     LOOT_DIRECTLY_TO_INVENTORY("loot.directly_to_inventory", OptionType.BOOLEAN),
     CHECK_FOR_UPDATES("check_for_updates", OptionType.BOOLEAN),

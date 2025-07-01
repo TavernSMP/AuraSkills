@@ -12,6 +12,7 @@ import dev.aurelium.auraskills.api.stat.Stat;
 import dev.aurelium.auraskills.api.stat.StatModifier;
 import dev.aurelium.auraskills.api.trait.Trait;
 import dev.aurelium.auraskills.api.trait.TraitModifier;
+import dev.aurelium.auraskills.api.util.AuraSkillsModifier.Operation;
 import dev.aurelium.auraskills.api.util.NumberUtil;
 import dev.aurelium.auraskills.common.AuraSkillsPlugin;
 import dev.aurelium.auraskills.common.ui.ActionBarType;
@@ -33,31 +34,44 @@ public class SqlUserLoader {
 
     private final AuraSkillsPlugin plugin;
     private static final String LOAD_QUERY = """
-        SELECT u.*,
-            (
-                SELECT JSON_ARRAYAGG(JSON_OBJECT(
-                    'name', s.skill_name,
-                    'level', s.skill_level,
-                    'xp', s.skill_xp
-                ))
-                FROM auraskills_skill_levels s
-                WHERE s.user_id = u.user_id
-            ) AS skill_levels,
-            (
-                SELECT JSON_ARRAYAGG(JSON_OBJECT(
-                    'data_id', k.data_id,
-                    'category_id', k.category_id,
-                    'key_name', k.key_name,
-                    'value', k.value
-                ))
-                FROM auraskills_key_values k
-                WHERE k.user_id = u.user_id
-            ) AS key_values
-        FROM
-            auraskills_users u
-        WHERE
-            u.player_uuid = ?;
-        """;
+            SELECT u.*,
+                (
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT(
+                        'name', s.skill_name,
+                        'level', s.skill_level,
+                        'xp', s.skill_xp
+                    ))
+                    FROM auraskills_skill_levels s
+                    WHERE s.user_id = u.user_id
+                ) AS skill_levels,
+                (
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT(
+                        'data_id', k.data_id,
+                        'category_id', k.category_id,
+                        'key_name', k.key_name,
+                        'value', k.value
+                    ))
+                    FROM auraskills_key_values k
+                    WHERE k.user_id = u.user_id
+                ) AS key_values,
+                (
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT(
+                        'modifier_type', m.modifier_type,
+                        'type_id', m.type_id,
+                        'modifier_name', m.modifier_name,
+                        'modifier_value', m.modifier_value,
+                        'modifier_operation', m.modifier_operation,
+                        'expiration_time', m.expiration_time,
+                        'remaining_duration', m.remaining_duration
+                    ))
+                    FROM auraskills_modifiers m
+                    WHERE m.user_id = u.user_id
+                ) AS modifiers
+            FROM
+                auraskills_users u
+            WHERE
+                u.player_uuid = ?;
+            """;
 
     public SqlUserLoader(AuraSkillsPlugin plugin) {
         this.plugin = plugin;
@@ -83,7 +97,8 @@ public class SqlUserLoader {
         // Load locale
         String localeString = rs.getString("locale");
         if (localeString != null) {
-            user.setLocale(new Locale(localeString));
+            localeString = localeString.replace("_", "-");
+            user.setLocale(Locale.forLanguageTag(localeString));
         }
         // Load mana
         double mana = rs.getDouble("mana");
@@ -116,11 +131,10 @@ public class SqlUserLoader {
                 int dataId = keyValueObj.get("data_id").getAsInt();
                 String categoryId = getString(keyValueObj, "category_id");
                 String keyName = getString(keyValueObj, "key_name");
+                if (keyName == null) continue;
                 String value = getString(keyValueObj, "value");
 
                 switch (dataId) {
-                    case STAT_MODIFIER_ID -> applyStatModifier(user, categoryId, keyName, value);
-                    case TRAIT_MODIFIER_ID -> applyTraitModifier(user, categoryId, keyName, value);
                     case ABILITY_DATA_ID -> applyAbilityData(user, categoryId, keyName, value);
                     case UNCLAIMED_ITEMS_ID -> applyUnclaimedItem(user, keyName, value);
                     case ACTION_BAR_ID -> applyActionBar(user, keyName, value);
@@ -129,40 +143,61 @@ public class SqlUserLoader {
             }
         }
 
+        // Load modifiers
+        JsonArray modifiers = getJsonArray("modifiers", rs);
+        if (modifiers != null && !modifiers.isJsonNull()) {
+            for (JsonElement modifierElement : modifiers) {
+                applyModifier(user, modifierElement);
+            }
+        }
+
         // Cleanup
         user.clearInvalidItems();
     }
 
-    private String getString(JsonObject parent, String key) {
-        JsonElement element = parent.get(key);
-        if (element != null && !element.isJsonNull() && element.isJsonPrimitive()) {
-            return element.getAsString();
+    private void applyModifier(User user, JsonElement modifierElement) {
+        JsonObject modifierObj = modifierElement.getAsJsonObject();
+
+        String modifierType = getString(modifierObj, "modifier_type");
+        String typeId = getString(modifierObj, "type_id");
+        if (typeId.isEmpty()) return;
+
+        String name = getString(modifierObj, "modifier_name");
+        double value = getDouble(modifierObj, "modifier_value");
+        byte operationVal = getByte(modifierObj, "modifier_operation");
+        Operation operation = Operation.fromSqlId(operationVal);
+
+        long expirationTime = getLong(modifierObj, "expiration_time");
+        long remainingDuration = getLong(modifierObj, "remaining_duration");
+        boolean pauseOffline = false;
+        if (remainingDuration != 0) {
+            expirationTime = System.currentTimeMillis() + remainingDuration;
+            pauseOffline = true;
         }
-        return "";
-    }
 
-    private void applyStatModifier(User user, String categoryId, String keyName, String valueStr) {
-        try {
-            double valueDouble = Double.parseDouble(valueStr);
-
-            Stat stat = plugin.getStatRegistry().getOrNull(NamespacedId.fromString(categoryId));
+        if (modifierType.equals(MODIFIER_TYPE_STAT)) {
+            Stat stat = plugin.getStatRegistry().getOrNull(NamespacedId.fromString(typeId));
             if (stat == null) return;
 
-            StatModifier modifier = new StatModifier(keyName, stat, valueDouble);
-            user.addStatModifier(modifier, false);
-        } catch (NumberFormatException ignored) {}
-    }
-
-    private void applyTraitModifier(User user, String categoryId, String keyName, String valueStr) {
-        try {
-            double valueDouble = Double.parseDouble(valueStr);
-
-            Trait trait = plugin.getTraitRegistry().getOrNull(NamespacedId.fromString(categoryId));
+            StatModifier modifier = new StatModifier(name, stat, value, operation);
+            if (expirationTime != 0) {
+                modifier.makeTemporary(expirationTime, pauseOffline);
+                user.getUserStats().addTemporaryStatModifier(modifier, false, expirationTime);
+            } else {
+                user.addStatModifier(modifier, false);
+            }
+        } else if (modifierType.equals(MODIFIER_TYPE_TRAIT)) {
+            Trait trait = plugin.getTraitRegistry().getOrNull(NamespacedId.fromString(typeId));
             if (trait == null) return;
 
-            TraitModifier modifier = new TraitModifier(keyName, trait, valueDouble);
-            user.addTraitModifier(modifier, false);
-        } catch (NumberFormatException ignored) {}
+            TraitModifier modifier = new TraitModifier(name, trait, value, operation);
+            if (expirationTime != 0) {
+                modifier.makeTemporary(expirationTime, pauseOffline);
+                user.getUserStats().addTemporaryTraitModifier(modifier, false, expirationTime);
+            } else {
+                user.addTraitModifier(modifier, false);
+            }
+        }
     }
 
     private void applyAbilityData(User user, String categoryId, String keyName, String valueStr) {
@@ -190,7 +225,8 @@ public class SqlUserLoader {
             ActionBarType type = ActionBarType.valueOf(keyName.toUpperCase(Locale.ROOT));
             boolean enabled = !valueStr.equals("false");
             user.setActionBarSetting(type, enabled);
-        } catch (IllegalArgumentException ignored) { }
+        } catch (IllegalArgumentException ignored) {
+        }
     }
 
     private void applyJobs(User user, String keyName, String valueStr) {
@@ -240,10 +276,43 @@ public class SqlUserLoader {
             } catch (NumberFormatException e) {
                 try {
                     parsed = Double.parseDouble(value);
-                } catch (NumberFormatException ignored) {}
+                } catch (NumberFormatException ignored) {
+                }
             }
         }
         return parsed;
+    }
+
+    private String getString(JsonObject parent, String key) {
+        JsonElement element = parent.get(key);
+        if (element != null && !element.isJsonNull() && element.isJsonPrimitive()) {
+            return element.getAsString();
+        }
+        return "";
+    }
+
+    private long getLong(JsonObject parent, String key) {
+        JsonElement element = parent.get(key);
+        if (element != null && !element.isJsonNull() && element.isJsonPrimitive()) {
+            return element.getAsLong();
+        }
+        return 0;
+    }
+
+    private double getDouble(JsonObject parent, String key) {
+        JsonElement element = parent.get(key);
+        if (element != null && !element.isJsonNull() && element.isJsonPrimitive()) {
+            return element.getAsDouble();
+        }
+        return 0.0;
+    }
+
+    private byte getByte(JsonObject parent, String key) {
+        JsonElement element = parent.get(key);
+        if (element != null && !element.isJsonNull() && element.isJsonPrimitive()) {
+            return element.getAsByte();
+        }
+        return 0;
     }
 
 }

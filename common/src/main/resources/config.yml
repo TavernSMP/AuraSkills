@@ -35,8 +35,6 @@ hooks:
   LuckPerms:
     enabled: true
     use_permission_cache: true
-  Oraxen:
-    enabled: true
   PlaceholderAPI:
     enabled: true
   ProtocolLib:
@@ -58,6 +56,8 @@ hooks:
     handle_damage_increase: true
     handle_damage_reduction: true
     prevent_regular_xp: false
+  Nexo:
+    enabled: true
 action_bar:
   enabled: true
   idle: true
@@ -191,6 +191,7 @@ data_validation:
 on_death:
   reset_skills: false
   reset_xp: false
+  reset_xp_ratio: 0
 auto_save:
   enabled: true
   interval_ticks: 12000
@@ -223,6 +224,9 @@ modifier:
   multiplier:
     enabled: true
   auto_convert_from_legacy: false
+  temporary:
+    enabled: true
+    check_period: 20
 requirement:
   enabled: true
   override_global: false
@@ -235,6 +239,11 @@ requirement:
   armor:
     prevent_armor_equip: true
     global: [ ]
+  blocks:
+    enabled: true
+    bypass_in_creative_mode: true
+    bypass_if_op: false
+    list: [ ]
 damage:
   correct_last_damage: true
 critical:
@@ -259,8 +268,11 @@ source:
 menus:
   lore_wrapping_width: 43
   placeholder_api: true
+  removal_protection: false
   stats:
     show_trait_values_directly: true
+  stat_info:
+    enabled: true
 loot:
   update_loot_tables: true
   directly_to_inventory: false

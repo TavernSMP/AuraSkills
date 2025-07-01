@@ -12,8 +12,10 @@ import dev.aurelium.auraskills.api.source.XpSource;
 import dev.aurelium.auraskills.api.trait.Trait;
 import dev.aurelium.auraskills.api.trait.TraitModifier;
 import dev.aurelium.auraskills.api.trait.Traits;
+import dev.aurelium.auraskills.api.util.AuraSkillsModifier.Operation;
 import dev.aurelium.auraskills.api.util.NumberUtil;
 import dev.aurelium.auraskills.bukkit.AuraSkills;
+import dev.aurelium.auraskills.bukkit.item.TraitModifiers;
 import dev.aurelium.auraskills.bukkit.menus.util.SlateMenuHelper;
 import dev.aurelium.auraskills.bukkit.util.ItemUtils;
 import dev.aurelium.auraskills.common.message.type.MenuMessage;
@@ -73,7 +75,7 @@ public class GatheringLuckTraits extends TraitImpl {
 
             Location location = block.getLocation().add(0.5, 0.5, 0.5);
 
-            boolean toInventory = plugin.getLootTableManager().toInventory(player.getInventory().getItemInMainHand());
+            boolean toInventory = plugin.getLootManager().toInventory(player.getInventory().getItemInMainHand());
             Cause cause = getCause(skill);
             LootDropEvent event = new LootDropEvent(player, user.toApi(), droppedItem, location, cause, toInventory);
             Bukkit.getPluginManager().callEvent(event);
@@ -90,17 +92,40 @@ public class GatheringLuckTraits extends TraitImpl {
 
         Ability ability = getAbility(trait);
         if (ability == null) return;
-        if (!ability.isEnabled()) return;
 
-        String modifierName = trait.name().toLowerCase(Locale.ROOT) + "_ability";
+        TraitModifiers label = getModifierLabel(ability);
+        String modifierName = label != null ? label.getModifierId() : trait.name().toLowerCase(Locale.ROOT) + "_ability";
+
+        if (!ability.isEnabled()) {
+            user.removeTraitModifier(modifierName, false);
+            return;
+        }
+
         // Get the luck trait value from the ability value
         double value = ability.getValue(user.getAbilityLevel(ability));
 
         if (value != 0) {
-            user.addTraitModifier(new TraitModifier(modifierName, trait, value), false);
+            var modifier = new TraitModifier(modifierName, trait, value, Operation.ADD);
+            modifier.setNonPersistent();
+            user.addTraitModifier(modifier, false);
         } else {
-            user.removeTraitModifier(modifierName);
+            user.removeTraitModifier(modifierName, false);
         }
+    }
+
+    private static @Nullable TraitModifiers getModifierLabel(Ability ability) {
+        TraitModifiers label = null;
+        if (ability instanceof Abilities builtIn) {
+            label = switch (builtIn) {
+                case BOUNTIFUL_HARVEST -> TraitModifiers.BOUNTIFUL_HARVEST;
+                case LUMBERJACK -> TraitModifiers.LUMBERJACK;
+                case LUCKY_MINER -> TraitModifiers.LUCKY_MINER;
+                case LUCKY_CATCH -> TraitModifiers.LUCKY_CATCH;
+                case BIGGER_SCOOP -> TraitModifiers.BIGGER_SCOOP;
+                default -> null;
+            };
+        }
+        return label;
     }
 
     @EventHandler

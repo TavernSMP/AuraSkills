@@ -78,6 +78,7 @@ public class FileUtil {
     public static ConfigurationNode loadYamlFile(File file) throws IOException {
         YamlConfigurationLoader loader = YamlConfigurationLoader.builder()
                 .file(file)
+                .defaultOptions(opts -> opts.shouldCopyDefaults(false))
                 .nodeStyle(NodeStyle.BLOCK)
                 .build();
         return loader.load();
@@ -86,6 +87,7 @@ public class FileUtil {
     public static void saveYamlFile(File file, @NotNull ConfigurationNode config) throws IOException {
         YamlConfigurationLoader loader = YamlConfigurationLoader.builder()
                 .file(file)
+                .defaultOptions(opts -> opts.shouldCopyDefaults(false))
                 .nodeStyle(NodeStyle.BLOCK)
                 .indent(2)
                 .build();
@@ -105,7 +107,7 @@ public class FileUtil {
 
         Map<String, String> env = new HashMap<>();
         env.put("create", "true");
-        if (createFileSystem) {
+        if (createFileSystem && "jar".equals(uri.getScheme())) {
             try (FileSystem ignored = FileSystems.newFileSystem(uri, env)) {
                 return loadFromUri(uri);
             }
@@ -116,6 +118,7 @@ public class FileUtil {
 
     private static ConfigurationNode loadFromUri(URI uri) throws ConfigurateException {
         YamlConfigurationLoader loader = YamlConfigurationLoader.builder()
+                .defaultOptions(opts -> opts.shouldCopyDefaults(false))
                 .path(Path.of(uri))
                 .build();
 

@@ -1,15 +1,21 @@
 package dev.aurelium.auraskills.bukkit.skills.mining;
 
 import dev.aurelium.auraskills.api.ability.Abilities;
+import dev.aurelium.auraskills.api.damage.DamageModifier;
 import dev.aurelium.auraskills.api.damage.DamageType;
 import dev.aurelium.auraskills.api.event.damage.DamageEvent;
+import dev.aurelium.auraskills.api.event.item.ItemDisableEvent;
+import dev.aurelium.auraskills.api.event.item.ItemEnableEvent;
+import dev.aurelium.auraskills.api.event.item.ItemToggleEvent;
+import dev.aurelium.auraskills.api.item.ModifierType;
 import dev.aurelium.auraskills.api.stat.StatModifier;
 import dev.aurelium.auraskills.api.stat.Stats;
+import dev.aurelium.auraskills.api.util.AuraSkillsModifier.Operation;
 import dev.aurelium.auraskills.bukkit.AuraSkills;
-import dev.aurelium.auraskills.bukkit.ability.AbilityImpl;
+import dev.aurelium.auraskills.bukkit.ability.BukkitAbilityImpl;
+import dev.aurelium.auraskills.bukkit.user.BukkitUser;
 import dev.aurelium.auraskills.bukkit.util.ItemUtils;
 import dev.aurelium.auraskills.bukkit.util.VersionUtils;
-import dev.aurelium.auraskills.api.damage.DamageModifier;
 import dev.aurelium.auraskills.common.user.User;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -18,7 +24,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.player.PlayerItemDamageEvent;
 
-public class MiningAbilities extends AbilityImpl {
+public class MiningAbilities extends BukkitAbilityImpl {
 
     public MiningAbilities(AuraSkills plugin) {
         super(plugin, Abilities.LUCKY_MINER, Abilities.MINER, Abilities.PICK_MASTER, Abilities.HARDENED_ARMOR, Abilities.STAMINA);
@@ -32,9 +38,7 @@ public class MiningAbilities extends AbilityImpl {
         }
         if (VersionUtils.isAtLeastVersion(17)) {
             switch (mat) {
-                case IRON_ORE, DEEPSLATE_IRON_ORE, GOLD_ORE, DEEPSLATE_GOLD_ORE, COPPER_ORE, DEEPSLATE_COPPER_ORE,
-                        DEEPSLATE_DIAMOND_ORE, DEEPSLATE_REDSTONE_ORE, DEEPSLATE_EMERALD_ORE,
-                        DEEPSLATE_COAL_ORE, DEEPSLATE_LAPIS_ORE:
+                case IRON_ORE, DEEPSLATE_IRON_ORE, GOLD_ORE, DEEPSLATE_GOLD_ORE, COPPER_ORE, DEEPSLATE_COPPER_ORE, DEEPSLATE_DIAMOND_ORE, DEEPSLATE_REDSTONE_ORE, DEEPSLATE_EMERALD_ORE, DEEPSLATE_COAL_ORE, DEEPSLATE_LAPIS_ORE:
                     return true;
             }
         }
@@ -85,7 +89,13 @@ public class MiningAbilities extends AbilityImpl {
         }
     }
 
-    public void applyStamina(Player player, User user) {
+    @EventHandler
+    public void applyStamina(ItemEnableEvent event) {
+        if (isNotStamina(event)) return;
+
+        Player player = event.getPlayer();
+        User user = BukkitUser.getUser(event.getUser());
+
         var ability = Abilities.STAMINA;
 
         if (isDisabled(ability)) return;
@@ -94,11 +104,22 @@ public class MiningAbilities extends AbilityImpl {
 
         if (user.getAbilityLevel(ability) == 0) return;
 
-        user.addStatModifier(new StatModifier("mining-stamina", Stats.TOUGHNESS, (int) getValue(ability, user)));
+        user.addStatModifier(new StatModifier("mining-stamina", Stats.TOUGHNESS, (int) getValue(ability, user), Operation.ADD));
     }
 
-    public void removeStamina(User user) {
+    @EventHandler
+    public void removeStamina(ItemDisableEvent event) {
+        if (isNotStamina(event)) return;
+
+        User user = BukkitUser.getUser(event.getUser());
         user.removeStatModifier("mining-stamina");
+    }
+
+    private boolean isNotStamina(ItemToggleEvent event) {
+        if (!ItemUtils.isPickaxe(event.getItem().getType())) {
+            return true;
+        }
+        return event.getType() != ModifierType.ITEM;
     }
 
 }

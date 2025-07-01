@@ -1,12 +1,12 @@
 package dev.aurelium.auraskills.bukkit.item;
 
 import dev.aurelium.auraskills.api.item.*;
-import dev.aurelium.auraskills.api.registry.NamespacedId;
-import dev.aurelium.auraskills.api.skill.Skill;
-import dev.aurelium.auraskills.bukkit.AuraSkills;
 import dev.aurelium.auraskills.api.loot.Loot;
 import dev.aurelium.auraskills.api.loot.LootPool;
 import dev.aurelium.auraskills.api.loot.LootTable;
+import dev.aurelium.auraskills.api.registry.NamespacedId;
+import dev.aurelium.auraskills.api.skill.Skill;
+import dev.aurelium.auraskills.bukkit.AuraSkills;
 import dev.aurelium.auraskills.bukkit.loot.type.ItemLoot;
 import dev.aurelium.auraskills.bukkit.user.BukkitUser;
 import dev.aurelium.auraskills.bukkit.util.ItemUtils;
@@ -132,7 +132,7 @@ public class BukkitItemRegistry implements ItemRegistry {
     public boolean passesFilter(ItemStack item, LootItemFilter filter, Skill skill) {
         String lootTableName = filter.lootPool();
         if (lootTableName != null) {
-            LootTable lootTable = plugin.getLootTableManager().getLootTable(skill);
+            LootTable lootTable = plugin.getLootManager().getLootTable(skill);
             if (lootTable == null) {
                 return false;
             }
@@ -201,6 +201,7 @@ public class BukkitItemRegistry implements ItemRegistry {
         externalItemProviders.put(namespace, provider);
     }
 
+    @SuppressWarnings("deprecation")
     private boolean passesItemMetaFilter(ItemStack item, ItemFilter filter) {
         ItemFilterMeta filterMeta = filter.meta();
         if (filterMeta == null) {

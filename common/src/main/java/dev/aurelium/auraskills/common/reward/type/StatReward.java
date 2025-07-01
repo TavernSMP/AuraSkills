@@ -9,24 +9,31 @@ import dev.aurelium.auraskills.common.message.type.LevelerFormat;
 import dev.aurelium.auraskills.common.reward.SkillReward;
 import dev.aurelium.auraskills.common.user.User;
 import dev.aurelium.auraskills.common.util.text.TextUtil;
+import org.jetbrains.annotations.Nullable;
 
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.Locale;
 
 public class StatReward extends SkillReward {
 
     private final Stat stat;
     private final double value;
+    private NumberFormat numberFormat;
 
-    public StatReward(AuraSkillsPlugin plugin, Stat stat, double value) {
-        super(plugin);
+    public StatReward(AuraSkillsPlugin plugin, Skill skill, Stat stat, double value, @Nullable String format) {
+        super(plugin, skill);
         this.stat = stat;
         this.value = value;
+        if (format != null) {
+            this.numberFormat = new DecimalFormat(format);
+        }
     }
 
     @Override
     public void giveReward(User user, Skill skill, int level) {
-        user.addStatLevel(stat, value);
-        plugin.getStatManager().reloadStat(user, stat);
+        user.getUserStats().recalculateStat(stat);
+        plugin.getStatManager().reload(user, stat);
     }
 
     public Stat getStat() {
@@ -58,7 +65,9 @@ public class StatReward extends SkillReward {
 
     private String getDisplayValue(Locale locale) {
         if (stat.getTraits().contains(Traits.HP) && stat.getTraitModifier(Traits.HP) == 1.0) {
-            return Traits.HP.getMenuDisplay(value, locale);
+            return plugin.getTraitManager().getMenuDisplay(Traits.HP, value, locale, numberFormat);
+        } else if (numberFormat != null) {
+            return numberFormat.format(value);
         } else {
             return NumberUtil.format1(value);
         }

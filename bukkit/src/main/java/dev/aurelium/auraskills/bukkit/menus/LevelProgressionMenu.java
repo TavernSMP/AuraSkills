@@ -85,6 +85,7 @@ public class LevelProgressionMenu {
         menu.item("previous_page", globalItems::previousPage);
         menu.item("next_page", globalItems::nextPage);
         menu.item("close", globalItems::close);
+        menu.fillItem(globalItems::fill);
 
         var skillItem = new SkillItem(plugin);
         skillItem.buildComponents(menu);
@@ -456,7 +457,10 @@ public class LevelProgressionMenu {
         StringBuilder message = new StringBuilder();
         double totalMoney = 0;
         for (SkillReward reward : rewards) {
-            message.append(reward.getMenuMessage(plugin.getUser(info.player()), info.locale(), skill, level));
+            String rewardMsg = reward.getMenuMessage(plugin.getUser(info.player()), info.locale(), skill, level);
+            if (rewardMsg != null) {
+                message.append(rewardMsg);
+            }
             if (reward instanceof MoneyReward) {
                 totalMoney += ((MoneyReward) reward).getAmount(level);
             }

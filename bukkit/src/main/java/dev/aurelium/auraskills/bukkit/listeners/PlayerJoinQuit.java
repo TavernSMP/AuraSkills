@@ -16,6 +16,8 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
+import static dev.aurelium.auraskills.bukkit.ref.BukkitPlayerRef.wrap;
+
 public class PlayerJoinQuit implements Listener {
 
     private final AuraSkills plugin;
@@ -68,7 +70,7 @@ public class PlayerJoinQuit implements Listener {
     private void loadUserAsync(Player player) {
         plugin.getScheduler().executeAsync(() -> {
             try {
-                plugin.getStorageProvider().load(player.getUniqueId());
+                plugin.getStorageProvider().load(player.getUniqueId(), wrap(player));
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -86,11 +88,12 @@ public class PlayerJoinQuit implements Listener {
         }
 
         try {
-            Locale locale = new Locale(player.getLocale().split("_")[0].toLowerCase(Locale.ROOT));
+            Locale locale = Locale.forLanguageTag(player.getLocale().split("_")[0].toLowerCase(Locale.ROOT));
             if (plugin.getMessageProvider().getLoadedLanguages().contains(locale)) {
                 user.setLocale(locale);
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
     }
 
     private void sendUpdateMessage(Player player) {

@@ -39,9 +39,16 @@ public class AnvilDiscountTrait extends TraitImpl {
         return NumberUtil.format1(getDiscount(value) * 100) + "%";
     }
 
+    @Override
+    public boolean displayMatchesValue() {
+        return false;
+    }
+
     @EventHandler
     @SuppressWarnings("removal")
     public void onAnvilPrepare(PrepareAnvilEvent event) {
+        if (!Traits.ANVIL_DISCOUNT.isEnabled()) return;
+
         User user = null;
         // Finds the viewer with the highest wisdom level
         for (HumanEntity entity : event.getViewers()) {
