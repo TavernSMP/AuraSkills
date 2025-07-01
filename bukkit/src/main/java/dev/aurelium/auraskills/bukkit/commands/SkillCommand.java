@@ -2,11 +2,14 @@ package dev.aurelium.auraskills.bukkit.commands;
 
 import co.aikar.commands.BaseCommand;
 import co.aikar.commands.annotation.*;
+import dev.aurelium.auraskills.api.AuraSkillsApi;
 import dev.aurelium.auraskills.api.skill.Skill;
 import dev.aurelium.auraskills.bukkit.AuraSkills;
 import dev.aurelium.auraskills.common.message.MessageBuilder;
 import dev.aurelium.auraskills.common.message.type.CommandMessage;
 import dev.aurelium.auraskills.common.user.User;
+import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -60,33 +63,65 @@ public class SkillCommand extends BaseCommand {
     @CommandCompletion("@players")
     @CommandPermission("auraskills.command.skill.setlevel")
     @Description("Sets all of a player's skills to a level.")
-    public void onSkillSetall(CommandSender sender, @Flags("other") Player player, int level) {
-        User user = plugin.getUser(player);
-        Locale locale = user.getLocale();
-        int startLevel = plugin.config().getStartLevel();
-        if (level >= startLevel) {
-            for (Skill skill : plugin.getSkillRegistry().getValues()) {
-                if (skill.isEnabled()) {
-                    int oldLevel = user.getSkillLevel(skill);
-                    user.setSkillLevel(skill, level);
-                    user.setSkillXp(skill, 0);
-                    // Reload items and armor to check for newly met requirements
-                    plugin.getModifierManager().reloadPlayer(player);
-                    plugin.getRewardManager().applyRevertCommands(user, skill, oldLevel, level);
-                    plugin.getRewardManager().applyLevelUpCommands(user, skill, oldLevel, level);
+    public void onSkillSetall(CommandSender sender, OfflinePlayer offlinePlayer, int level) {
+
+        Player player = Bukkit.getPlayer(offlinePlayer.getUniqueId());
+
+        // Check if player is online
+        if (player != null) {
+            User user = plugin.getUser(player);
+            Locale locale = user.getLocale();
+            int startLevel = plugin.config().getStartLevel();
+            if (level >= startLevel) {
+                for (Skill skill : plugin.getSkillRegistry().getValues()) {
+                    if (skill.isEnabled()) {
+                        int oldLevel = user.getSkillLevel(skill);
+                        user.setSkillLevel(skill, level);
+                        user.setSkillXp(skill, 0);
+                        // Reload items and armor to check for newly met requirements
+                        plugin.getModifierManager().reloadPlayer(player);
+                        plugin.getRewardManager().applyRevertCommands(user, skill, oldLevel, level);
+                        plugin.getRewardManager().applyLevelUpCommands(user, skill, oldLevel, level);
+                    }
                 }
+                plugin.getStatManager().updateStats(user);
+                plugin.getRewardManager().updatePermissions(user);
+                sender.sendMessage(plugin.getPrefix(locale) + plugin.getMsg(CommandMessage.SKILL_SETALL_SET, locale)
+                        .replace("{level}", String.valueOf(level))
+                        .replace("{player}", player.getName()));
+            } else {
+                sender.sendMessage(MessageBuilder.create(plugin).locale(locale)
+                        .prefix()
+                        .message(CommandMessage.SKILL_AT_LEAST, "level", String.valueOf(startLevel))
+                        .toString());
             }
-            plugin.getStatManager().updateStats(user);
-            plugin.getRewardManager().updatePermissions(user);
-            sender.sendMessage(plugin.getPrefix(locale) + plugin.getMsg(CommandMessage.SKILL_SETALL_SET, locale)
-                    .replace("{level}", String.valueOf(level))
-                    .replace("{player}", player.getName()));
         } else {
-            sender.sendMessage(MessageBuilder.create(plugin).locale(locale)
-                    .prefix()
-                    .message(CommandMessage.SKILL_AT_LEAST, "level", String.valueOf(startLevel))
-                    .toString());
+            // Otherwise, modify player data in the database
+            AuraSkillsApi.get().getUserManager().loadUser(offlinePlayer.getUniqueId()).thenAccept(user -> {
+                Locale locale = user.getLocale();
+                int startLevel = plugin.config().getStartLevel();
+                if (level >= startLevel) {
+                    for (Skill skill : plugin.getSkillRegistry().getValues()) {
+                        if (!skill.isEnabled()) {
+                            continue;
+                        }
+                        int oldLevel = user.getSkillLevel(skill);
+                        user.setSkillLevel(skill, level);
+                        user.setSkillXp(skill, 0);
+                        // Reload items and armor to check for newly met requirements
+                    }
+                    sender.sendMessage(plugin.getPrefix(locale) + plugin.getMsg(CommandMessage.SKILL_SETALL_SET, locale)
+                            .replace("{level}", String.valueOf(level))
+                            .replace("{player}", offlinePlayer.getName()));
+                } else {
+                    sender.sendMessage(MessageBuilder.create(plugin).locale(locale)
+                            .prefix()
+                            .message(CommandMessage.SKILL_AT_LEAST, "level", String.valueOf(startLevel))
+                            .toString());
+                }
+            });
         }
+
     }
 
 
