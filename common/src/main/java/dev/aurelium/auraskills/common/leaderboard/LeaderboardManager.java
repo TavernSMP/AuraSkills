@@ -211,7 +211,7 @@ public class LeaderboardManager {
             }
 
             // aglerr: Skip player if the power level is exactly 14400
-            if (powerLevel == 14400) {
+            if (powerLevel == 14400 || powerLevel == 14500 || powerLevel == 19000) {
                 continue;
             }
             // Add to power and average leaderboards
@@ -254,7 +254,7 @@ public class LeaderboardManager {
             }
 
             // aglerr: Skip player if the power level is exactly 14400
-            if (powerLevel == 14400) {
+            if (powerLevel == 14400 || powerLevel == 14500 || powerLevel == 19000) {
                 continue;
             }
             // Add to power and average leaderboards
